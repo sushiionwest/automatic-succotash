@@ -81,7 +81,7 @@ export function CardItem({ card, isDragging = false, currentUserId, isLead = fal
         setSubmitting(true);
         try {
             await submitForReview(card.id);
-            toast.success("Submitted for review!");
+            toast.success("Sent to lead!");
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to submit");
         } finally {
@@ -207,7 +207,7 @@ export function CardItem({ card, isDragging = false, currentUserId, isLead = fal
                                 disabled={submitting}
                                 className="h-6 px-2 text-[10px] bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 hover:text-blue-300"
                             >
-                                {submitting ? "..." : "Submit"}
+                                {submitting ? "Sending..." : "Send to Lead"}
                             </Button>
                         )}
 

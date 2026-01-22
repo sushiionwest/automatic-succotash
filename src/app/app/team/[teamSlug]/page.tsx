@@ -140,7 +140,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
                 {/* One-sentence instruction */}
                 <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg px-6 py-4 mb-8">
                     <p className="text-blue-200 text-center text-lg">
-                        <span className="font-bold">Pick one task</span> → Follow "Done looks like" → <span className="font-bold">Submit for Review</span>
+                        <span className="font-bold">Pick one task</span> → Follow "Done looks like" → <span className="font-bold">Send to Lead</span>
                     </p>
                 </div>
 

@@ -44,7 +44,7 @@ export function TaskCard({ card, boardId, currentUserId, mode }: TaskCardProps) 
         setLoading(true);
         try {
             await submitForReview(card.id);
-            toast.success("Submitted for review! A lead will check it.");
+            toast.success("Sent to lead! They'll check it soon.");
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to submit");
         } finally {
@@ -102,7 +102,7 @@ export function TaskCard({ card, boardId, currentUserId, mode }: TaskCardProps) 
                     disabled={loading}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
-                    {loading ? "Submitting..." : "Submit for Review"}
+                    {loading ? "Sending..." : "Send to Lead"}
                 </Button>
             )}
         </div>
