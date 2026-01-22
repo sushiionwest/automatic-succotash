@@ -17,9 +17,11 @@ interface TeamColumnProps {
         cards: CardWithAssigneeAndTeam[];
     };
     teamName: string;
+    currentUserId?: string;
+    boardId?: string;
 }
 
-export function TeamColumn({ column, teamName }: TeamColumnProps) {
+export function TeamColumn({ column, teamName, currentUserId, boardId }: TeamColumnProps) {
     const {
         attributes,
         listeners,
@@ -72,7 +74,13 @@ export function TeamColumn({ column, teamName }: TeamColumnProps) {
                         </div>
                     ) : (
                         column.cards.map((card) => (
-                            <CardItem key={card.id} card={card} />
+                            <CardItem
+                                key={card.id}
+                                card={card}
+                                currentUserId={currentUserId}
+                                boardId={boardId}
+                                columnName={column.name}
+                            />
                         ))
                     )}
                 </SortableContext>

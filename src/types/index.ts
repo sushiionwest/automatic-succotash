@@ -1,6 +1,9 @@
 // Priority is a string literal type since SQLite doesn't support enums
 export type Priority = "P0" | "P1" | "P2" | "P3";
 
+// Task types for SAE workflow
+export type TaskType = "Design" | "Build" | "Test" | "Docs" | "Procurement";
+
 // Define types manually matching schema
 export interface User {
     id: string;
@@ -51,7 +54,7 @@ export interface Column {
     id: string;
     name: string;
     order: number;
-    wipLimit: number | null; // Added WIP limit
+    wipLimit: number | null;
     boardId: string;
     createdAt: Date;
     updatedAt: Date;
@@ -60,17 +63,24 @@ export interface Column {
 export interface Card {
     id: string;
     title: string;
-    description: string | null;
-    acceptanceCriteria: string | null;
-    priority: string;
+    description: string | null;          // "What to do"
+    acceptanceCriteria: string | null;   // "Done looks like"
+    priority: string;                    // P0, P1, P2, P3
+    taskType: string | null;             // Design, Build, Test, Docs, Procurement
+    inputsLinks: string | null;          // CAD links, Drive, datasheets, rules
+    artifacts: string | null;            // Photo URLs, CAD files, test data links
     /** @deprecated Use teamId instead */
     subsystem: string | null;
     isOnboarding: boolean;
+    isBlocked: boolean;
+    blockedReason: string | null;
     dueDate: Date | null;
     order: number;
     columnId: string;
-    assigneeId: string | null;
-    teamId: string | null;      // Team this card belongs to
+    assigneeId: string | null;           // Owner
+    reviewerId: string | null;           // Reviewer
+    isApproved: boolean;                 // Lead approval for Done
+    teamId: string | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -89,6 +99,7 @@ export interface CardWithTeam extends Card {
 
 export interface CardWithAssigneeAndTeam extends Card {
     assignee: User | null;
+    reviewer: User | null;
     team: Team | null;
 }
 

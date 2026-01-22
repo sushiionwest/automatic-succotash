@@ -190,6 +190,8 @@ export function TeamKanbanBoard({ board, team, currentUserId }: TeamKanbanBoardP
                                 key={column.id}
                                 column={column}
                                 teamName={team.name}
+                                currentUserId={currentUserId}
+                                boardId={board.id}
                             />
                         ))}
                     </SortableContext>

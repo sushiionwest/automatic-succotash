@@ -20,9 +20,11 @@ import { toast } from "sonner";
 interface ColumnProps {
     column: ColumnWithCards;
     boardId: string;
+    currentUserId?: string;
+    isLead?: boolean;
 }
 
-export function Column({ column, boardId }: ColumnProps) {
+export function Column({ column, boardId, currentUserId, isLead = false }: ColumnProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(column.name);
     const [loading, setLoading] = useState(false);
@@ -153,7 +155,14 @@ export function Column({ column, boardId }: ColumnProps) {
                         </div>
                     ) : (
                         column.cards.map((card) => (
-                            <CardItem key={card.id} card={card} />
+                            <CardItem
+                                key={card.id}
+                                card={card}
+                                currentUserId={currentUserId}
+                                isLead={isLead}
+                                boardId={boardId}
+                                columnName={column.name}
+                            />
                         ))
                     )}
                 </SortableContext>

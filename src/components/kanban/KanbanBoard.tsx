@@ -197,6 +197,7 @@ export function KanbanBoard({ board, currentUserId }: KanbanBoardProps) {
                                 key={column.id}
                                 column={column}
                                 boardId={board.id}
+                                currentUserId={currentUserId}
                             />
                         ))}
                     </SortableContext>

@@ -26,6 +26,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
                         orderBy: { order: "asc" },
                         include: {
                             assignee: true,
+                            reviewer: true,
                             team: true,
                         },
                     },

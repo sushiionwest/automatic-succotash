@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Priority } from "@/types";
+import { Priority, TaskType } from "@/types";
 import { revalidatePath } from "next/cache";
 
 // Check if user has team permission for a card move
@@ -82,6 +82,9 @@ export async function createCard(
         description?: string;
         acceptanceCriteria?: string;
         priority?: Priority;
+        taskType?: TaskType | null;
+        inputsLinks?: string;
+        isOnboarding?: boolean;
         subsystem?: string;       // @deprecated - Use teamId instead
         teamId?: string | null;
         dueDate?: Date | null;
@@ -120,6 +123,9 @@ export async function createCard(
             description: data.description?.trim() || null,
             acceptanceCriteria: data.acceptanceCriteria?.trim() || null,
             priority: data.priority || "P2",
+            taskType: data.taskType || null,
+            inputsLinks: data.inputsLinks?.trim() || null,
+            isOnboarding: data.isOnboarding || false,
             subsystem: data.subsystem?.trim() || null,
             teamId: data.teamId || null,
             dueDate: data.dueDate || null,
@@ -139,10 +145,18 @@ export async function updateCard(
         description?: string;
         acceptanceCriteria?: string;
         priority?: Priority;
+        taskType?: TaskType | null;
+        inputsLinks?: string | null;
+        artifacts?: string | null;
+        isOnboarding?: boolean;
+        isBlocked?: boolean;
+        blockedReason?: string | null;
         subsystem?: string;       // @deprecated - Use teamId instead
         teamId?: string | null;
         dueDate?: Date | null;
         assigneeId?: string | null;
+        reviewerId?: string | null;
+        isApproved?: boolean;
     }
 ) {
     const session = await auth();
@@ -162,10 +176,18 @@ export async function updateCard(
             ...(data.description !== undefined && { description: data.description.trim() || null }),
             ...(data.acceptanceCriteria !== undefined && { acceptanceCriteria: data.acceptanceCriteria.trim() || null }),
             ...(data.priority !== undefined && { priority: data.priority }),
+            ...(data.taskType !== undefined && { taskType: data.taskType }),
+            ...(data.inputsLinks !== undefined && { inputsLinks: data.inputsLinks?.trim() || null }),
+            ...(data.artifacts !== undefined && { artifacts: data.artifacts?.trim() || null }),
+            ...(data.isOnboarding !== undefined && { isOnboarding: data.isOnboarding }),
+            ...(data.isBlocked !== undefined && { isBlocked: data.isBlocked }),
+            ...(data.blockedReason !== undefined && { blockedReason: data.blockedReason?.trim() || null }),
             ...(data.subsystem !== undefined && { subsystem: data.subsystem.trim() || null }),
             ...(data.teamId !== undefined && { teamId: data.teamId }),
             ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
             ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
+            ...(data.reviewerId !== undefined && { reviewerId: data.reviewerId }),
+            ...(data.isApproved !== undefined && { isApproved: data.isApproved }),
         },
     });
 
@@ -188,6 +210,46 @@ export async function deleteCard(cardId: string) {
     });
 
     revalidatePath(`/app/board/${card.column.board.id}`);
+}
+
+// Approve a card for Done (LEAD only)
+export async function approveCard(cardId: string) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const card = await db.card.findUnique({
+        where: { id: cardId },
+        include: { column: true },
+    });
+
+    if (!card) {
+        throw new Error("Card not found");
+    }
+
+    // Check if user is a lead of the card's team
+    if (card.teamId) {
+        const membership = await db.teamMember.findUnique({
+            where: {
+                teamId_userId: { teamId: card.teamId, userId: session.user.id },
+            },
+        });
+        if (!membership || membership.role !== "LEAD") {
+            throw new Error("Only team leads can approve cards");
+        }
+    }
+
+    // Set the reviewer and approval
+    await db.card.update({
+        where: { id: cardId },
+        data: {
+            reviewerId: session.user.id,
+            isApproved: true,
+        },
+    });
+
+    revalidatePath("/app");
 }
 
 export async function moveCard(
@@ -230,6 +292,43 @@ export async function moveCard(
         if (!permCheck.allowed) {
             throw new Error(permCheck.reason || "Permission denied");
         }
+    }
+
+    // Get full card data for validation
+    const fullCard = await db.card.findUnique({
+        where: { id: cardId },
+    });
+
+    // === DEFINITION OF READY ===
+    // Block moving to Ready unless: team + acceptance criteria
+    if (targetColumn.name === "Ready" && sourceColumn?.name !== "Ready") {
+        if (!fullCard?.teamId) {
+            throw new Error("Cannot move to Ready: Team must be set");
+        }
+        if (!fullCard?.acceptanceCriteria || fullCard.acceptanceCriteria.trim().length < 20) {
+            throw new Error("Cannot move to Ready: 'Done looks like' must be specified (min 20 chars)");
+        }
+    }
+
+    // === AUTO-ASSIGN ON DOING ===
+    // When moving to Doing, auto-assign if not assigned
+    let autoAssign = false;
+    if (targetColumn.name === "Doing" && sourceColumn?.name !== "Doing") {
+        if (!fullCard?.assigneeId) {
+            autoAssign = true;
+        }
+    }
+
+    // === DEFINITION OF DONE ===
+    // Block moving to Done unless: approved + has artifacts
+    if (targetColumn.name === "Done" && sourceColumn?.name !== "Done") {
+        if (!fullCard?.isApproved) {
+            throw new Error("Cannot move to Done: Card must be approved by a lead first");
+        }
+        // Optional: require artifacts
+        // if (!fullCard?.artifacts || fullCard.artifacts.trim().length === 0) {
+        //     throw new Error("Cannot move to Done: At least one artifact/link is required");
+        // }
     }
 
     // Check WIP limit if moving to a different column
@@ -277,7 +376,12 @@ export async function moveCard(
             // Update the moved card
             db.card.update({
                 where: { id: cardId },
-                data: { columnId: targetColumnId, order: targetIndex },
+                data: {
+                    columnId: targetColumnId,
+                    order: targetIndex,
+                    // Auto-assign if moving to Doing
+                    ...(autoAssign && { assigneeId: session.user.id }),
+                },
             }),
             // Reorder source column
             ...sourceCards.map((c, idx) =>
@@ -322,7 +426,7 @@ export async function claimCard(cardId: string, boardId: string) {
         throw new Error("Card not found");
     }
 
-    // Verify the card is actually claimable (in Ready, is onboarding, not assigned)
+    // Verify the card is actually claimable (in Ready, not assigned)
     if (card.column.name !== "Ready") {
         throw new Error("Can only claim cards in Ready status");
     }
@@ -384,4 +488,105 @@ export async function claimCard(cardId: string, boardId: string) {
     // Revalidate relevant paths
     revalidatePath(`/app/board/${card.column.boardId}`);
     revalidatePath(`/app/team`);
+}
+
+// Toggle blocked status
+export async function toggleCardBlocked(cardId: string, isBlocked: boolean, reason?: string) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const card = await verifyCardOwnership(cardId, session.user.id);
+    if (!card) {
+        throw new Error("Card not found");
+    }
+
+    await db.card.update({
+        where: { id: cardId },
+        data: {
+            isBlocked,
+            blockedReason: isBlocked ? (reason?.trim() || null) : null,
+        },
+    });
+
+    revalidatePath(`/app/board/${card.column.board.id}`);
+}
+
+// Submit card for review - moves from Doing to Review
+export async function submitForReview(cardId: string) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const card = await db.card.findUnique({
+        where: { id: cardId },
+        include: {
+            column: {
+                include: { board: true },
+            },
+        },
+    });
+
+    if (!card) {
+        throw new Error("Card not found");
+    }
+
+    // Must be in Doing column
+    if (card.column.name !== "Doing") {
+        throw new Error("Can only submit cards from Doing column");
+    }
+
+    // Must be assigned to current user (or any team member)
+    if (card.assigneeId !== session.user.id) {
+        // Check if user is a team member
+        if (card.teamId) {
+            const membership = await db.teamMember.findUnique({
+                where: {
+                    teamId_userId: { teamId: card.teamId, userId: session.user.id },
+                },
+            });
+            if (!membership) {
+                throw new Error("Only the card owner or team members can submit for review");
+            }
+        }
+    }
+
+    // Find Review column
+    const reviewColumn = await db.column.findFirst({
+        where: {
+            boardId: card.column.boardId,
+            name: "Review",
+        },
+    });
+
+    if (!reviewColumn) {
+        throw new Error("Review column not found");
+    }
+
+    // Check WIP limit
+    if (reviewColumn.wipLimit !== null) {
+        const count = await db.card.count({ where: { columnId: reviewColumn.id } });
+        if (count >= reviewColumn.wipLimit) {
+            throw new Error(`Review column WIP limit (${reviewColumn.wipLimit}) reached`);
+        }
+    }
+
+    // Get order for new position
+    const lastCard = await db.card.findFirst({
+        where: { columnId: reviewColumn.id },
+        orderBy: { order: "desc" },
+    });
+
+    await db.card.update({
+        where: { id: cardId },
+        data: {
+            columnId: reviewColumn.id,
+            order: (lastCard?.order ?? -1) + 1,
+        },
+    });
+
+    revalidatePath(`/app/board/${card.column.boardId}`);
+    revalidatePath("/app/team");
 }

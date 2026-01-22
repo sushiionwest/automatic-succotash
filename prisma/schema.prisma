@@ -34,15 +34,16 @@ model Session {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  name          String?
-  email         String?        @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  boards        Board[]
-  assignedCards Card[]
+  id              String         @id @default(cuid())
+  name            String?
+  email           String?        @unique
+  emailVerified   DateTime?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  boards          Board[]
+  assignedCards   Card[]         @relation("AssignedCards")
+  reviewingCards  Card[]         @relation("ReviewingCards")
   teamMemberships TeamMember[]
 }
 
@@ -112,17 +113,30 @@ model TeamMember {
 model Card {
   id                 String    @id @default(cuid())
   title              String
-  description        String?
+  description        String?   // "What to do"
   acceptanceCriteria String?   // "Done looks like"
-  priority           String    @default("P2")
+  priority           String    @default("P2") // P0, P1, P2, P3
+  taskType           String?   // Design, Build, Test, Docs, Procurement
+  inputsLinks        String?   // CAD links, Google Drive, datasheets, rule refs (can be multiline)
+  artifacts          String?   // Photo URLs, CAD files, test data links (can be multiline)
   subsystem          String?   // @deprecated - Use teamId instead. Kept for migration.
   isOnboarding       Boolean   @default(false)
+  isBlocked          Boolean   @default(false)
+  blockedReason      String?
   dueDate            DateTime?
   order              Int
   columnId           String
   column             Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  assigneeId         String?   // Strict single ownership
-  assignee           User?     @relation(fields: [assigneeId], references: [id])
+  
+  // Ownership
+  assigneeId         String?   // Owner - required once in Doing
+  assignee           User?     @relation("AssignedCards", fields: [assigneeId], references: [id])
+  
+  // Review
+  reviewerId         String?   // Reviewer - required once in Review
+  reviewer           User?     @relation("ReviewingCards", fields: [reviewerId], references: [id])
+  isApproved         Boolean   @default(false) // Lead must approve to move to Done
+  
   teamId             String?   // Team this card belongs to (nullable for migration)
   team               Team?     @relation(fields: [teamId], references: [id])
   createdAt          DateTime  @default(now())
@@ -130,5 +144,6 @@ model Card {
 
   @@index([columnId])
   @@index([assigneeId])
+  @@index([reviewerId])
   @@index([teamId])
 }

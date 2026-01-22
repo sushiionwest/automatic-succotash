@@ -57,6 +57,7 @@ export default async function TeamBoardPage({ params, searchParams }: TeamBoardP
                             orderBy: { order: "asc" },
                             include: {
                                 assignee: true,
+                                reviewer: true,
                                 team: true,
                             },
                         },
