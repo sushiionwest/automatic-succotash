@@ -28,11 +28,12 @@ interface CardModalProps {
     onOpenChange: (open: boolean) => void;
     currentUserId?: string;
     isLead?: boolean;
+    onDelete?: (cardId: string) => void;
 }
 
 const TASK_TYPES: TaskType[] = ["Design", "Build", "Test", "Docs", "Procurement"];
 
-export function CardModal({ card, open, onOpenChange, currentUserId, isLead = false }: CardModalProps) {
+export function CardModal({ card, open, onOpenChange, currentUserId, isLead = false, onDelete }: CardModalProps) {
     const [title, setTitle] = useState(card.title);
     const [description, setDescription] = useState(card.description || "");
     const [acceptanceCriteria, setAcceptanceCriteria] = useState(card.acceptanceCriteria || "");
@@ -108,6 +109,7 @@ export function CardModal({ card, open, onOpenChange, currentUserId, isLead = fa
         try {
             await deleteCard(card.id);
             toast.success("Card deleted");
+            onDelete?.(card.id);
             onOpenChange(false);
         } catch (error) {
             toast.error("Failed to delete card");

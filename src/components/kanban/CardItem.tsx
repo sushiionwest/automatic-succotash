@@ -18,6 +18,7 @@ interface CardItemProps {
     isLead?: boolean;
     boardId?: string;
     columnName?: string;
+    onDelete?: (cardId: string) => void;
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -35,7 +36,7 @@ const taskTypeColors: Record<TaskType, string> = {
     Procurement: "bg-pink-500/20 text-pink-400 border-pink-500/30",
 };
 
-export function CardItem({ card, isDragging = false, currentUserId, isLead = false, boardId, columnName }: CardItemProps) {
+export function CardItem({ card, isDragging = false, currentUserId, isLead = false, boardId, columnName, onDelete }: CardItemProps) {
     const [showModal, setShowModal] = useState(false);
     const [claiming, setClaiming] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -238,6 +239,7 @@ export function CardItem({ card, isDragging = false, currentUserId, isLead = fal
                 onOpenChange={setShowModal}
                 currentUserId={currentUserId}
                 isLead={isLead}
+                onDelete={onDelete}
             />
         </>
     );
