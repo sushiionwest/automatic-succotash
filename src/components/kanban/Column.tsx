@@ -22,9 +22,10 @@ interface ColumnProps {
     boardId: string;
     currentUserId?: string;
     isLead?: boolean;
+    onCardDeleted?: (cardId: string) => void;
 }
 
-export function Column({ column, boardId, currentUserId, isLead = false }: ColumnProps) {
+export function Column({ column, boardId, currentUserId, isLead = false, onCardDeleted }: ColumnProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(column.name);
     const [loading, setLoading] = useState(false);
@@ -162,6 +163,7 @@ export function Column({ column, boardId, currentUserId, isLead = false }: Colum
                                 isLead={isLead}
                                 boardId={boardId}
                                 columnName={column.name}
+                                onDelete={onCardDeleted}
                             />
                         ))
                     )}

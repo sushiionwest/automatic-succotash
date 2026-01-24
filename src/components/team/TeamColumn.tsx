@@ -19,9 +19,10 @@ interface TeamColumnProps {
     teamName: string;
     currentUserId?: string;
     boardId?: string;
+    onCardDeleted?: (cardId: string) => void;
 }
 
-export function TeamColumn({ column, teamName, currentUserId, boardId }: TeamColumnProps) {
+export function TeamColumn({ column, teamName, currentUserId, boardId, onCardDeleted }: TeamColumnProps) {
     const {
         attributes,
         listeners,
@@ -80,6 +81,7 @@ export function TeamColumn({ column, teamName, currentUserId, boardId }: TeamCol
                                 currentUserId={currentUserId}
                                 boardId={boardId}
                                 columnName={column.name}
+                                onDelete={onCardDeleted}
                             />
                         ))
                     )}

@@ -171,6 +171,15 @@ export function TeamKanbanBoard({ board, team, currentUserId }: TeamKanbanBoardP
         }
     }, [columns, findColumnByCardId, board.columns, currentUserId]);
 
+    const handleCardDeleted = useCallback((cardId: string) => {
+        setColumns((prev) =>
+            prev.map((col) => ({
+                ...col,
+                cards: col.cards.filter((card) => card.id !== cardId),
+            }))
+        );
+    }, []);
+
     return (
         <div className="flex-1 overflow-x-auto p-6">
             <DndContext
@@ -192,6 +201,7 @@ export function TeamKanbanBoard({ board, team, currentUserId }: TeamKanbanBoardP
                                 teamName={team.name}
                                 currentUserId={currentUserId}
                                 boardId={board.id}
+                                onCardDeleted={handleCardDeleted}
                             />
                         ))}
                     </SortableContext>
